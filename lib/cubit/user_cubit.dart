@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:masrtiongapi/core/api/api_consumer.dart';
-import 'package:masrtiongapi/core/api/end_points.dart';
-import 'package:masrtiongapi/core/cache/cache_helper.dart';
-import 'package:masrtiongapi/core/errors/exceptions.dart';
-import 'package:masrtiongapi/core/functions/upload_image.to_api.dart';
 import 'package:masrtiongapi/cubit/user_state.dart';
 import 'package:masrtiongapi/models/sign_in_model.dart';
 import 'package:masrtiongapi/models/sign_up_model.dart';
-import 'package:masrtiongapi/models/update_data.dart';
-import 'package:masrtiongapi/models/user_model.dart';
+import 'package:masrtiongapi/repos/user_repo.dart';
 
 class UserCubit extends Cubit<UserState> {
-  final ApiConsumer apiConsumer;
-  UserCubit(this.apiConsumer) : super(UserInitial());
+  final UserRepo userRepo;
+  UserCubit(this.userRepo) : super(UserInitial());
 
   // Controllers
   GlobalKey<FormState> signInFormKey = GlobalKey();
@@ -43,87 +36,53 @@ class UserCubit extends Cubit<UserState> {
   }
 
   Future<void> signUp() async {
-    try {
-      emit(SignUpLoading());
-      final response = await apiConsumer.post(
-        EndPoints.signUp,
-        isFromData: true,
-        data: {
-          ApiKey.name: signUpName.text,
-          ApiKey.email: signUpEmail.text,
-          ApiKey.phone: signUpPhoneNumber.text,
-          ApiKey.password: signUpPassword.text,
-          ApiKey.confirmPassword: confirmPassword.text,
-          ApiKey.profilePic: await uploadImageToApi(profilePic!),
-          ApiKey.location:
-              '{"name":"methalfa","address":"meet halfa","coordinates":[30.1572709,31.224779]}',
-        },
-      );
-      final signUpModel = SignUpModel.fromjson(response);
-      emit(SignUpSuccess(message: signUpModel.message));
-    } on ServerException catch (e) {
-      emit(SignUpFailure(errorMessage: e.errorModel.errorMessage));
-    }
+    emit(SignUpLoading());
+    final response = await userRepo.signUp(
+      name: signUpName.text,
+      email: signUpEmail.text,
+      pass: signUpPassword.text,
+      phone: signUpPhoneNumber.text,
+      confirmpass: confirmPassword.text,
+      profilePic: profilePic!,
+    );
+    response.fold(
+      (errorMessage) => emit(SignUpFailure(errorMessage: errorMessage)),
+      (signUpModel) => emit(SignUpSuccess(message: signUpModel.message)),
+    );
   }
 
   Future<void> signIn() async {
-    try {
-      emit(SignInLoading());
-      final response = await apiConsumer.post(
-        EndPoints.signIn,
-        data: {
-          ApiKey.email: signInEmail.text,
-          ApiKey.password: signInPassword.text,
-        },
-      );
-      user = SignInModel.fromJson(response);
-      final decodedToken = JwtDecoder.decode(user!.token);
-      await CacheHelper().saveData(key: ApiKey.token, value: user!.token);
-      await CacheHelper().saveData(
-        key: ApiKey.id,
-        value: decodedToken[ApiKey.id],
-      );
-      emit(SignInSuccess());
-      await getUserProfile();
-    } on ServerException catch (e) {
-      emit(SignInFailure(errorMessage: e.errorModel.errorMessage));
-    }
+    emit(SignInLoading());
+    final response = await userRepo.signIn(
+      email: signInEmail.text,
+      pass: signInPassword.text,
+    );
+    response.fold(
+      (errorMessage) => emit(SignInFailure(errorMessage: errorMessage)),
+      (signInModel) => emit(SignInSuccess()),
+    );
   }
 
   Future<void> getUserProfile() async {
-    try {
-      emit(GetUserLoading());
-      final response = await apiConsumer.get(
-        EndPoints.getUserDataEndPoint(CacheHelper().getData(key: ApiKey.id)),
-      );
-      emit(GetUserSuccess(user: UserModel.fromjson(response)));
-    } on ServerException catch (e) {
-      emit(GetUserFailure(errorMessage: e.errorModel.errorMessage));
-    }
+    emit(GetUserLoading());
+    final response = await userRepo.getUserProfile();
+    response.fold(
+      (errorMessage) => emit(GetUserFailure(errorMessage: errorMessage)),
+      (user) => emit(GetUserSuccess(user: user)),
+    );
   }
 
   Future<void> upDateUserData() async {
-    try {
-      emit(UpDateUserDataLoading());
-      final response = await apiConsumer.patch(
-        EndPoints.upDateUserData,
-        isFromData: true,
-        data: {
-          ApiKey.name: upDateName.text,
-          ApiKey.phone: '01126414087',
-          ApiKey.location:
-              '{"name":"Egypt","address":"meet halfa","coordinates":[1214451511,12541845]}',
-        },
-      );
-      emit(
-        UpDateUserDataSuccess(
-          updateDataModel: UpdateDataModel.fromjson(response),
-        ),
-      );
-      await getUserProfile(); // Refresh user data after update
-    } on ServerException catch (e) {
-      emit(UpDateUserDataFailure(errorMessage: e.errorModel.errorMessage));
-    }
+    emit(UpDateUserDataLoading());
+    final response = await userRepo.upDateUserData(name: upDateName.text);
+
+    response.fold(
+      (errorMessage) => emit(UpDateUserDataFailure(errorMessage: errorMessage)),
+      (updateDataModel) async {
+        emit(UpDateUserDataSuccess(updateDataModel: updateDataModel));
+        await getUserProfile();
+      },
+    );
   }
 
   @override
