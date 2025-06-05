@@ -11,6 +11,7 @@ import 'package:masrtiongapi/core/functions/upload_image.to_api.dart';
 import 'package:masrtiongapi/cubit/user_state.dart';
 import 'package:masrtiongapi/models/sign_in_model.dart';
 import 'package:masrtiongapi/models/sign_up_model.dart';
+import 'package:masrtiongapi/models/user_model.dart';
 
 class UserCubit extends Cubit<UserState> {
   final ApiConsumer apiConsumer;
@@ -42,6 +43,7 @@ class UserCubit extends Cubit<UserState> {
     emit(UploadProfilePic());
   }
 
+  // sign up
   signUp() async {
     try {
       emit(SignUpLoading());
@@ -85,6 +87,19 @@ class UserCubit extends Cubit<UserState> {
       emit(SignInSuccess());
     } on ServerException catch (e) {
       emit(SignInFailure(errorMessage: e.errorModel.errorMessage));
+    }
+  }
+
+  // get data
+  getUserProfile() async {
+    try {
+      emit(GetUserLoading());
+      final response = await apiConsumer.get(
+        EndPoints.getUserDataEndPoint(CacheHelper().getData(key: ApiKey.id)),
+      );
+      emit(GetUserSuccess(user: UserModel.fromjson(response)));
+    } on ServerException catch (e) {
+      emit(GetUserFailure(errorMessage: e.errorModel.errorMessage));
     }
   }
 }

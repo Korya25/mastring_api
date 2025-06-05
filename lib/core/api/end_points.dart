@@ -3,9 +3,13 @@ class EndPoints {
 
   static const String signIn = 'user/signin';
   static const String signUp = 'user/signup';
+  static String getUserDataEndPoint(id) {
+    return "user/get-user/$id";
+  }
 }
 
 class ApiKey {
+  static const String user = 'user';
   static const String status = 'status';
   static const String message = 'message';
   static const String errorMessage = 'ErrorMessage';
