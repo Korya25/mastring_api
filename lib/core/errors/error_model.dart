@@ -2,13 +2,13 @@ import 'package:masrtiongapi/core/api/end_points.dart';
 
 class ErrorModel {
   final int status;
-  final String message;
+  final String errorMessage;
 
-  ErrorModel({required this.status, required this.message});
+  ErrorModel({required this.status, required this.errorMessage});
   factory ErrorModel.fromJson(Map<String, dynamic> json) {
     return ErrorModel(
       status: json[ApiKey.status],
-      message: json[ApiKey.errorMessage],
+      errorMessage: json[ApiKey.errorMessage],
     );
   }
 }

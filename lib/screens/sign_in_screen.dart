@@ -70,6 +70,14 @@ class SignInScreen extends StatelessWidget {
                             //! Forget password?
                             ForgetPasswordWidget(size: size),
                             const SizedBox(height: 20),
+                            state is SignInFailure
+                                ? Text(
+                                    state.errorMessage,
+                                    maxLines: 1,
+                                    style: TextStyle(color: Colors.red),
+                                  )
+                                : SizedBox(height: 0),
+                            const SizedBox(height: 20),
                             //!Sign In Button
                             state is SignInLoading
                                 ? CircularProgressIndicator()
