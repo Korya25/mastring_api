@@ -1,3 +1,4 @@
+import 'package:masrtiongapi/models/update_data.dart';
 import 'package:masrtiongapi/models/user_model.dart';
 
 class UserState {}
@@ -42,4 +43,18 @@ final class GetUserFailure extends UserState {
   final String errorMessage;
 
   GetUserFailure({required this.errorMessage});
+}
+
+final class UpDateUserDataSuccess extends UserState {
+  final UpdateDataModel updateDataModel;
+
+  UpDateUserDataSuccess({required this.updateDataModel});
+}
+
+final class UpDateUserDataLoading extends UserState {}
+
+final class UpDateUserDataFailure extends UserState {
+  final String errorMessage;
+
+  UpDateUserDataFailure({required this.errorMessage});
 }

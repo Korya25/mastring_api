@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,40 +10,39 @@ import 'package:masrtiongapi/core/functions/upload_image.to_api.dart';
 import 'package:masrtiongapi/cubit/user_state.dart';
 import 'package:masrtiongapi/models/sign_in_model.dart';
 import 'package:masrtiongapi/models/sign_up_model.dart';
+import 'package:masrtiongapi/models/update_data.dart';
 import 'package:masrtiongapi/models/user_model.dart';
 
 class UserCubit extends Cubit<UserState> {
   final ApiConsumer apiConsumer;
   UserCubit(this.apiConsumer) : super(UserInitial());
-  //Sign in Form key
+
+  // Controllers
   GlobalKey<FormState> signInFormKey = GlobalKey();
-  //Sign in email
   TextEditingController signInEmail = TextEditingController();
-  //Sign in password
   TextEditingController signInPassword = TextEditingController();
-  //Sign Up Form key
+
   GlobalKey<FormState> signUpFormKey = GlobalKey();
-  //Profile Pic
   XFile? profilePic;
-  //Sign up name
   TextEditingController signUpName = TextEditingController();
-  //Sign up phone number
   TextEditingController signUpPhoneNumber = TextEditingController();
-  //Sign up email
   TextEditingController signUpEmail = TextEditingController();
-  //Sign up password
   TextEditingController signUpPassword = TextEditingController();
-  //Sign up confirm password
   TextEditingController confirmPassword = TextEditingController();
+
+  TextEditingController upDateName = TextEditingController();
   SignInModel? user;
 
-  uploadProfilePic(XFile image) {
+  void clearUpdateFields() {
+    upDateName.clear();
+  }
+
+  Future<void> uploadProfilePic(XFile image) async {
     profilePic = image;
     emit(UploadProfilePic());
   }
 
-  // sign up
-  signUp() async {
+  Future<void> signUp() async {
     try {
       emit(SignUpLoading());
       final response = await apiConsumer.post(
@@ -68,8 +66,7 @@ class UserCubit extends Cubit<UserState> {
     }
   }
 
-  // sign In
-  signIn() async {
+  Future<void> signIn() async {
     try {
       emit(SignInLoading());
       final response = await apiConsumer.post(
@@ -81,17 +78,19 @@ class UserCubit extends Cubit<UserState> {
       );
       user = SignInModel.fromJson(response);
       final decodedToken = JwtDecoder.decode(user!.token);
-      CacheHelper().saveData(key: ApiKey.token, value: user!.token);
-      CacheHelper().saveData(key: ApiKey.id, value: decodedToken[ApiKey.id]);
-
+      await CacheHelper().saveData(key: ApiKey.token, value: user!.token);
+      await CacheHelper().saveData(
+        key: ApiKey.id,
+        value: decodedToken[ApiKey.id],
+      );
       emit(SignInSuccess());
+      await getUserProfile();
     } on ServerException catch (e) {
       emit(SignInFailure(errorMessage: e.errorModel.errorMessage));
     }
   }
 
-  // get data
-  getUserProfile() async {
+  Future<void> getUserProfile() async {
     try {
       emit(GetUserLoading());
       final response = await apiConsumer.get(
@@ -101,5 +100,42 @@ class UserCubit extends Cubit<UserState> {
     } on ServerException catch (e) {
       emit(GetUserFailure(errorMessage: e.errorModel.errorMessage));
     }
+  }
+
+  Future<void> upDateUserData() async {
+    try {
+      emit(UpDateUserDataLoading());
+      final response = await apiConsumer.patch(
+        EndPoints.upDateUserData,
+        isFromData: true,
+        data: {
+          ApiKey.name: upDateName.text,
+          ApiKey.phone: '01126414087',
+          ApiKey.location:
+              '{"name":"Egypt","address":"meet halfa","coordinates":[1214451511,12541845]}',
+        },
+      );
+      emit(
+        UpDateUserDataSuccess(
+          updateDataModel: UpdateDataModel.fromjson(response),
+        ),
+      );
+      await getUserProfile(); // Refresh user data after update
+    } on ServerException catch (e) {
+      emit(UpDateUserDataFailure(errorMessage: e.errorModel.errorMessage));
+    }
+  }
+
+  @override
+  Future<void> close() {
+    signInEmail.dispose();
+    signInPassword.dispose();
+    signUpName.dispose();
+    signUpPhoneNumber.dispose();
+    signUpEmail.dispose();
+    signUpPassword.dispose();
+    confirmPassword.dispose();
+    upDateName.dispose();
+    return super.close();
   }
 }

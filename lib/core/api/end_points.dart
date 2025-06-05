@@ -6,6 +6,8 @@ class EndPoints {
   static String getUserDataEndPoint(id) {
     return "user/get-user/$id";
   }
+
+  static const String upDateUserData = 'user/update';
 }
 
 class ApiKey {
