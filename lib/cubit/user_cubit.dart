@@ -1,5 +1,4 @@
-// ignore_for_file: avoid_print
-
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,8 +7,10 @@ import 'package:masrtiongapi/core/api/api_consumer.dart';
 import 'package:masrtiongapi/core/api/end_points.dart';
 import 'package:masrtiongapi/core/cache/cache_helper.dart';
 import 'package:masrtiongapi/core/errors/exceptions.dart';
+import 'package:masrtiongapi/core/functions/upload_image.to_api.dart';
 import 'package:masrtiongapi/cubit/user_state.dart';
 import 'package:masrtiongapi/models/sign_in_model.dart';
+import 'package:masrtiongapi/models/sign_up_model.dart';
 
 class UserCubit extends Cubit<UserState> {
   final ApiConsumer apiConsumer;
@@ -35,6 +36,36 @@ class UserCubit extends Cubit<UserState> {
   //Sign up confirm password
   TextEditingController confirmPassword = TextEditingController();
   SignInModel? user;
+
+  uploadProfilePic(XFile image) {
+    profilePic = image;
+    emit(UploadProfilePic());
+  }
+
+  signUp() async {
+    try {
+      emit(SignUpLoading());
+      final response = await apiConsumer.post(
+        EndPoints.signUp,
+        isFromData: true,
+        data: {
+          ApiKey.name: signUpName.text,
+          ApiKey.email: signUpEmail.text,
+          ApiKey.phone: signUpPhoneNumber.text,
+          ApiKey.password: signUpPassword.text,
+          ApiKey.confirmPassword: confirmPassword.text,
+          ApiKey.profilePic: await uploadImageToApi(profilePic!),
+          ApiKey.location:
+              '{"name":"methalfa","address":"meet halfa","coordinates":[30.1572709,31.224779]}',
+        },
+      );
+      final signUpModel = SignUpModel.fromjson(response);
+      emit(SignUpSuccess(message: signUpModel.message));
+    } on ServerException catch (e) {
+      emit(SignUpFailure(errorMessage: e.errorModel.errorMessage));
+    }
+  }
+
   // sign In
   signIn() async {
     try {
